@@ -1,0 +1,4 @@
+package: github.com/t11e/go-pebbleclient
+import:
+- package: github.com/pkg/errors
+  version: ~>0.2.0
