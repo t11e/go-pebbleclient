@@ -61,10 +61,10 @@ type Client struct {
 // New constructs a new client.
 func New(options ClientOptions) (*Client, error) {
 	if options.Host == "" {
-		return nil, errors.New("Host must be specified")
+		return nil, errors.New("Host must be specified in options")
 	}
 	if options.AppName == "" {
-		return nil, errors.New("Application name must be specified")
+		return nil, errors.New("Application name must be specified in options")
 	}
 
 	version := options.ApiVersion
@@ -81,24 +81,29 @@ func New(options ClientOptions) (*Client, error) {
 	}, nil
 }
 
-// NewFromRequest constructs a new client that inherits the host name from an
-// HTTP request.
+// NewFromRequest constructs a new client that inherits the host name, protocol
+// and session from an HTTP request. Any options specified will override inferred
+// from the request.
 func NewFromRequest(options ClientOptions, req *http.Request) (*Client, error) {
 	var opts ClientOptions = options
-	opts.Host = req.URL.Host
-	opts.Protocol = req.URL.Scheme
-
-	if cookie, err := req.Cookie("checkpoint.session"); err != nil {
-		if err != http.ErrNoCookie {
-			return nil, err
-		}
-		if s := req.URL.Query().Get("session"); s != "" {
-			opts.Session = s
-		}
-	} else {
-		opts.Session = cookie.Value
+	if opts.Host == "" {
+		opts.Host = req.URL.Host
 	}
-
+	if opts.Protocol == "" {
+		opts.Protocol = req.URL.Scheme
+	}
+	if opts.Session == "" {
+		if cookie, err := req.Cookie("checkpoint.session"); err != nil {
+			if err != http.ErrNoCookie {
+				return nil, err
+			}
+			if s := req.URL.Query().Get("session"); s != "" {
+				opts.Session = s
+			}
+		} else {
+			opts.Session = cookie.Value
+		}
+	}
 	return New(opts)
 }
 
