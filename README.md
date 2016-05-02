@@ -23,7 +23,9 @@ Or from request:
 
 ```go
 func myHandler(w http.ResponseWriter, req *http.Request) {
-  client, err := pebbleclient.NewFromRequest(pebbleclient.ClientOptions{}, req)
+  client, err := pebbleclient.NewFromRequest(pebbleclient.ClientOptions{
+    AppName: "central",
+  }, req)
   // ...
 }
 ```
