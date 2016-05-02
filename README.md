@@ -10,12 +10,21 @@ Go client library for interacting with Pebble-style apps.
 import "github.com/t11e/go-pebbleclient"
 
 func main() {
-  client, err := New(pebbleclient.ClientOptions{
+  client, err := pebbleclient.New(pebbleclient.ClientOptions{
     AppName: "central",
     ApiVersion: 1,
     Session: "uio3uio43uio4oui432",
     Host: "localhost",
   })
+}
+```
+
+Or from request:
+
+```go
+func myHandler(w http.ResponseWriter, req *http.Request) {
+  client, err := pebbleclient.NewFromRequest(pebbleclient.ClientOptions{}, req)
+  // ...
 }
 ```
 
