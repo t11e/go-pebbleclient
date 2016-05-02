@@ -87,7 +87,7 @@ func New(options ClientOptions) (*Client, error) {
 func NewFromRequest(options ClientOptions, req *http.Request) (*Client, error) {
 	var opts ClientOptions = options
 	if opts.Host == "" {
-		opts.Host = req.URL.Host
+		opts.Host = req.Host
 	}
 	if opts.Protocol == "" {
 		opts.Protocol = req.URL.Scheme
