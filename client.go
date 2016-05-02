@@ -52,7 +52,7 @@ type ClientOptions struct {
 type Client struct {
 	host       string
 	session    string
-	scheme     string
+	protocol   string
 	appName    string
 	apiVersion int
 	httpClient *http.Client
@@ -61,8 +61,12 @@ type Client struct {
 // New constructs a new client.
 func New(options ClientOptions) (*Client, error) {
 	if options.Host == "" {
-		return nil, fmt.Errorf("Host must be specified")
+		return nil, errors.New("Host must be specified")
 	}
+	if options.AppName == "" {
+		return nil, errors.New("Application name must be specified")
+	}
+
 	version := options.ApiVersion
 	if version == 0 {
 		version = 1
@@ -70,7 +74,7 @@ func New(options ClientOptions) (*Client, error) {
 	return &Client{
 		host:       options.Host,
 		session:    options.Session,
-		scheme:     "http",
+		protocol:   "http",
 		apiVersion: version,
 		appName:    options.AppName,
 		httpClient: &http.Client{},
@@ -96,6 +100,16 @@ func NewFromRequest(options ClientOptions, req *http.Request) (*Client, error) {
 	}
 
 	return New(opts)
+}
+
+func (client *Client) GetOptions() ClientOptions {
+	return ClientOptions{
+		Host:       client.host,
+		Session:    client.session,
+		ApiVersion: client.apiVersion,
+		AppName:    client.appName,
+		Protocol:   client.protocol,
+	}
 }
 
 // Get performs a GET request. The args may include one or more Params (or *Params).
@@ -146,7 +160,7 @@ func (client *Client) formatUrl(path string, params *Params) string {
 		path = path[1:]
 	}
 	result := url.URL{
-		Scheme: client.scheme,
+		Scheme: client.protocol,
 		Host:   client.host,
 		Path:   fmt.Sprintf("/api/%s/v%d/%s", client.appName, client.apiVersion, path),
 	}

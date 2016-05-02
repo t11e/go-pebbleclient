@@ -10,15 +10,56 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNew_valid(t *testing.T) {
-	client, err := New(ClientOptions{Host: "localhost"})
+func TestNew_validWithDefaults(t *testing.T) {
+	client, err := New(ClientOptions{
+		Host:    "localhost",
+		AppName: "frobnitz",
+	})
 	assert.NoError(t, err)
 	assert.NotNil(t, client)
+	assert.Equal(t, "", client.GetOptions().Session)
+	assert.Equal(t, "localhost", client.GetOptions().Host)
+	assert.Equal(t, "http", client.GetOptions().Protocol)
+	assert.Equal(t, "frobnitz", client.GetOptions().AppName)
+}
+
+func TestNew_validWithOptions(t *testing.T) {
+	client, err := New(ClientOptions{
+		Host:    "localhost",
+		Session: "uio3ui3ui3",
+		AppName: "frobnitz",
+	})
+	assert.NoError(t, err)
+	assert.NotNil(t, client)
+	assert.Equal(t, "uio3ui3ui3", client.GetOptions().Session)
+	assert.Equal(t, "localhost", client.GetOptions().Host)
+	assert.Equal(t, "http", client.GetOptions().Protocol)
+	assert.Equal(t, "frobnitz", client.GetOptions().AppName)
 }
 
 func TestNew_invalidHost(t *testing.T) {
 	_, err := New(ClientOptions{Host: ""})
 	assert.Error(t, err)
+}
+
+func TestNewFromRequest(t *testing.T) {
+	req, err := http.NewRequest("GET", "http://example.com/", bytes.NewReader([]byte{}))
+	assert.NoError(t, err)
+
+	req.AddCookie(&http.Cookie{
+		Name:  "checkpoint.session",
+		Value: "uio3ui3ui3",
+	})
+
+	client, err := NewFromRequest(ClientOptions{
+		AppName: "frobnitz",
+	}, req)
+	assert.NoError(t, err)
+	assert.NotNil(t, client)
+	assert.Equal(t, "uio3ui3ui3", client.GetOptions().Session)
+	assert.Equal(t, "example.com", client.GetOptions().Host)
+	assert.Equal(t, "http", client.GetOptions().Protocol)
+	assert.Equal(t, "frobnitz", client.GetOptions().AppName)
 }
 
 type Datum struct {
