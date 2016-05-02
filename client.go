@@ -169,16 +169,18 @@ func (client *Client) formatUrl(path string, params *Params) string {
 		Host:   client.host,
 		Path:   fmt.Sprintf("/api/%s/v%d/%s", client.appName, client.apiVersion, path),
 	}
+
+	query := result.Query()
 	if params != nil {
-		values := result.Query()
 		for key, value := range *params {
-			values.Set(key, fmt.Sprintf("%s", value))
+			query.Set(key, fmt.Sprintf("%s", value))
 		}
-		result.RawQuery = values.Encode()
 	}
 	if client.session != "" {
-		result.Query().Set("session", client.session)
+		query.Set("session", client.session)
 	}
+	result.RawQuery = query.Encode()
+
 	return result.String()
 }
 
