@@ -22,7 +22,7 @@ func BuildValues(m map[string]string) url.Values {
 	return values
 }
 
-func escapedPath(path string) string {
+func URIEscape(path string) string {
 	escaped := (&url.URL{Path: path}).EscapedPath()
 	escaped = strings.Replace(escaped, "/", "%2F", -1)
 	return escaped

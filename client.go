@@ -184,8 +184,7 @@ func (client *HTTPClient) formatEndpointUrl(path string, params url.Values) stri
 	result := url.URL{
 		Scheme: client.Protocol,
 		Host:   client.Host,
-		Path: fmt.Sprintf("/api/%s/v%d/%s",
-			client.ServiceName, client.ApiVersion, escapedPath(path)),
+		Path:   fmt.Sprintf("/api/%s/v%d/%s", client.ServiceName, client.ApiVersion, path),
 	}
 
 	query := result.Query()
