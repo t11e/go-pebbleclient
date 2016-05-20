@@ -58,8 +58,14 @@ func decodeResponseAsJSON(resp *http.Response, body io.Reader, out interface{}) 
 		return fmt.Errorf("Expected response to be JSON, got %q", mediaType)
 	}
 
-	if err := json.NewDecoder(body).Decode(out); err != nil {
-		return errors.Wrap(err, "Could not decode error response JSON")
+	b, err := ioutil.ReadAll(body)
+	if err != nil {
+		return errors.Wrap(err, "Could not read entire response")
 	}
+
+	if err := json.Unmarshal(b, out); err != nil {
+		return errors.Wrap(err, "Could not decode response JSON")
+	}
+
 	return nil
 }
