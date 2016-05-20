@@ -84,23 +84,23 @@ func (client *HTTPClient) Options(opts Options) Client {
 }
 
 func (client *HTTPClient) Get(path string, opts *RequestOptions, result interface{}) error {
-	return client.Do(path, opts, http.MethodGet, nil, result)
+	return client.Do(path, opts, "GET", nil, result)
 }
 
 func (client *HTTPClient) Head(path string, opts *RequestOptions) error {
-	return client.Do(path, opts, http.MethodHead, nil, nil)
+	return client.Do(path, opts, "HEAD", nil, nil)
 }
 
 func (client *HTTPClient) Post(path string, opts *RequestOptions, body io.Reader, result interface{}) error {
-	return client.Do(path, opts, http.MethodPost, body, result)
+	return client.Do(path, opts, "POST", body, result)
 }
 
 func (client *HTTPClient) Put(path string, opts *RequestOptions, body io.Reader, result interface{}) error {
-	return client.Do(path, opts, http.MethodPut, body, result)
+	return client.Do(path, opts, "PUT", body, result)
 }
 
 func (client *HTTPClient) Delete(path string, opts *RequestOptions, result interface{}) error {
-	return client.Do(path, opts, http.MethodDelete, nil, result)
+	return client.Do(path, opts, "DELETE", nil, result)
 }
 
 func (client *HTTPClient) Do(
