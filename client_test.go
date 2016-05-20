@@ -43,11 +43,6 @@ func TestNewHTTPClient_validWithOptions(t *testing.T) {
 	assert.Equal(t, "frobnitz", client.GetOptions().ServiceName)
 }
 
-func TestNewHTTPClient_invalidHost(t *testing.T) {
-	_, err := NewHTTPClient(Options{Host: ""})
-	assert.Error(t, err)
-}
-
 type Datum struct {
 	Message string `json:"message"`
 }
