@@ -1,6 +1,7 @@
 package pebbleclient
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -29,9 +30,6 @@ type HTTPClient struct {
 
 // New constructs a new client.
 func NewHTTPClient(opts Options) (*HTTPClient, error) {
-	if err := opts.validate(); err != nil {
-		return nil, err
-	}
 	var newOpts options = *(*options)(opts.applyDefaults())
 	return &HTTPClient{
 		options: newOpts,
@@ -109,6 +107,14 @@ func (client *HTTPClient) Do(
 	method string,
 	body io.Reader,
 	result interface{}) error {
+	if client.Host == "" {
+		return errors.New("Host name not configured")
+	}
+
+	if client.ServiceName == "" {
+		return errors.New("Application name not configured")
+	}
+
 	if opts == nil {
 		opts = &RequestOptions{}
 	}

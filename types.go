@@ -1,7 +1,6 @@
 package pebbleclient
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -94,16 +93,6 @@ func (o *Options) applyDefaults() *Options {
 		}
 	}
 	return &newOpts
-}
-
-func (o *Options) validate() error {
-	if o.Host == "" {
-		return errors.New("Host must be specified in options")
-	}
-	if o.ServiceName == "" {
-		return errors.New("Application name must be specified in options")
-	}
-	return nil
 }
 
 // ClientBuilder generates new client instances.
