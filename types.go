@@ -2,6 +2,7 @@ package pebbleclient
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -110,10 +111,40 @@ type ClientBuilder interface {
 	NewClient(opts Options) Client
 }
 
+// Params is a map of query parameters.
+type Params map[string]interface{}
+
+// Values is a convenience function to generate url.Values from params.
+// Conversion to string is done like so:
+//
+// - If value is nil, use empty string.
+//
+// - If value is a string, use that.
+//
+// - If value implements fmt.Stringer, use that.
+//
+// - Otherwise, use fmt.Sprintf("%v", v).
+//
+func (p Params) ToValues() url.Values {
+	values := url.Values{}
+	for k, v := range p {
+		if v == nil {
+			values.Set(k, "")
+		} else if s, ok := v.(string); ok {
+			values.Set(k, s)
+		} else if s, ok := v.(fmt.Stringer); ok {
+			values.Set(k, s.String())
+		} else {
+			values.Set(k, fmt.Sprintf("%v", v))
+		}
+	}
+	return values
+}
+
 // RequestOptions is a set of options that can be applied to a request.
 type RequestOptions struct {
 	// Params is an optional map of query parameters.
-	Params url.Values
+	Params Params
 }
 
 type Client interface {

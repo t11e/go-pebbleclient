@@ -162,9 +162,9 @@ func TestClient_Get_withParams(t *testing.T) {
 
 	var result *Datum
 	err = client.Get("hello", &RequestOptions{
-		Params: Values(map[string]interface{}{
+		Params: Params{
 			"format": "json",
-		}),
+		},
 	}, &result)
 	assert.NoError(t, err)
 	assert.Equal(t, datum, result)

@@ -113,7 +113,7 @@ func (client *HTTPClient) Do(
 		opts = &RequestOptions{}
 	}
 
-	req, err := http.NewRequest(method, client.formatEndpointUrl(path, opts.Params), body)
+	req, err := http.NewRequest(method, client.formatEndpointUrl(path, opts.Params.ToValues()), body)
 	if err != nil {
 		return err
 	}
