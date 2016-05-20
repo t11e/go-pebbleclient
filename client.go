@@ -133,10 +133,13 @@ func (client *HTTPClient) do(
 		return err
 	}
 
-	bodyOut := resp.Body
+	respBody := resp.Body
 	defer func() {
-		if bodyOut != nil {
-			_ = bodyOut.Close()
+		if respBody != nil {
+			// Drain remaining body to work around bug in Go < 1.7
+			_, _ = io.Copy(ioutil.Discard, respBody)
+
+			_ = respBody.Close()
 		}
 	}()
 
@@ -145,7 +148,7 @@ func (client *HTTPClient) do(
 	}
 
 	if doesStatusCodeYieldBody(resp.StatusCode) && result != nil {
-		return decodeResponseAsJSON(resp, bodyOut, result)
+		return decodeResponseAsJSON(resp, respBody, result)
 	}
 
 	return nil
