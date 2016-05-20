@@ -142,4 +142,8 @@ type Client interface {
 	// sent. Provides the decoded return value in the result argument, unless
 	// nil.
 	Put(path string, opts *RequestOptions, body io.Reader, result interface{}) error
+
+	// Do performs an HTTP request.
+	Do(path string, opts *RequestOptions, method string, body io.Reader,
+		result interface{}) error
 }
