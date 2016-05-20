@@ -163,7 +163,7 @@ func (client *HTTPClient) Do(
 	}()
 
 	if isNonSuccessStatus(resp.StatusCode) {
-		return client.buildError(&RequestError{}, opts, resp)
+		return client.buildError(&RequestError{}, opts, req, resp)
 	}
 
 	if doesStatusCodeYieldBody(resp.StatusCode) && result != nil {
@@ -176,6 +176,7 @@ func (client *HTTPClient) Do(
 func (client *HTTPClient) buildError(
 	error *RequestError,
 	opts *RequestOptions,
+	req *http.Request,
 	resp *http.Response) error {
 	b, _ := ioutil.ReadAll(&io.LimitedReader{
 		R: resp.Body,
@@ -183,6 +184,7 @@ func (client *HTTPClient) buildError(
 	})
 	error.PartialBody = b
 	error.client = client
+	error.Req = req
 	error.Resp = resp
 	error.Options = opts
 	return error
