@@ -113,7 +113,12 @@ func (client *HTTPClient) Do(
 		opts = &RequestOptions{}
 	}
 
-	req, err := http.NewRequest(method, client.formatEndpointUrl(path, opts.Params.ToValues()), body)
+	url, err := client.formatEndpointUrl(path, opts.Params)
+	if err != nil {
+		return err
+	}
+
+	req, err := http.NewRequest(method, url, body)
 	if err != nil {
 		return err
 	}
@@ -177,7 +182,14 @@ func (client *HTTPClient) buildError(
 	return error
 }
 
-func (client *HTTPClient) formatEndpointUrl(path string, params url.Values) string {
+func (client *HTTPClient) formatEndpointUrl(path string, params Params) (string, error) {
+	values := params.ToValues()
+
+	var err error
+	path, err = formatPath(path, values)
+	if err != nil {
+		return "", err
+	}
 	if path[0:1] == "/" {
 		path = path[1:]
 	}
@@ -188,8 +200,8 @@ func (client *HTTPClient) formatEndpointUrl(path string, params url.Values) stri
 	}
 
 	query := result.Query()
-	if params != nil {
-		for k, vs := range params {
+	if values != nil {
+		for k, vs := range values {
 			for _, v := range vs {
 				query.Add(k, v)
 			}
@@ -197,5 +209,5 @@ func (client *HTTPClient) formatEndpointUrl(path string, params url.Values) stri
 	}
 	result.RawQuery = query.Encode()
 
-	return result.String()
+	return result.String(), nil
 }

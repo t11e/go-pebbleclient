@@ -170,6 +170,35 @@ func TestClient_Get_withParams(t *testing.T) {
 	assert.Equal(t, datum, result)
 }
 
+func TestClient_Get_withBeginningSlashPath(t *testing.T) {
+	client, server, err := newClientAndServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		assert.Equal(t, "/api/frobnitz/v1/hello", req.URL.Path)
+		w.WriteHeader(200)
+	}))
+	assert.NoError(t, err)
+	defer server.Close()
+
+	err = client.Get("/hello", nil, nil)
+	assert.NoError(t, err)
+}
+
+func TestClient_Get_withPathParams(t *testing.T) {
+	client, server, err := newClientAndServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		assert.Equal(t, "/api/frobnitz/v1/get/drkropotkin", req.URL.Path)
+		w.WriteHeader(200)
+	}))
+	assert.NoError(t, err)
+	defer server.Close()
+
+	err = client.Get("/get/:name", &RequestOptions{
+		Params: Params{
+			"name":   "drkropotkin",
+			"format": "json",
+		},
+	}, nil)
+	assert.NoError(t, err)
+}
+
 func TestClient_Get_badContentTypeInResponse(t *testing.T) {
 	client, server, err := newClientAndServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type", "text/html")

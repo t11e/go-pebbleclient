@@ -1,6 +1,7 @@
 package pebbleclient
 
 import (
+	"net/url"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -9,50 +10,65 @@ import (
 type formatTestCase struct {
 }
 
-func Test_FormatPath(t *testing.T) {
+func Test_formatPath(t *testing.T) {
 	for _, testCase := range []struct {
 		path   string
-		params Params
+		params url.Values
 		expect string
 	}{
 		{
 			path:   "/",
-			params: Params{"x": "y"},
+			params: url.Values{"x": []string{"y"}},
 			expect: "/",
 		},
 		{
 			path:   "/foo/bar",
-			params: Params{"x": "y"},
+			params: url.Values{"x": []string{"y"}},
 			expect: "/foo/bar",
 		},
 		{
-			path:   "/foo/:notexists",
-			params: Params{},
-			expect: "/foo/",
-		},
-		{
 			path:   "/foo/b:x",
-			params: Params{"x": "y"},
+			params: url.Values{"x": []string{"y"}},
 			expect: "/foo/b:x",
 		},
 		{
 			path:   "/foo/:x",
-			params: Params{"x": "y"},
+			params: url.Values{"x": []string{"y"}},
 			expect: "/foo/y",
 		},
 		{
 			path:   "/foo/:x",
-			params: Params{"x": "a b"},
+			params: url.Values{"x": []string{"a b"}},
 			expect: `/foo/a%20b`,
 		},
 		{
 			path:   "/foo/:x",
-			params: Params{"x": "a/b"},
+			params: url.Values{"x": []string{"a/b"}},
 			expect: `/foo/a%2Fb`,
 		},
+		{
+			path:   "/foo/:x",
+			params: url.Values{"x": []string{"a", "b"}},
+			expect: `/foo/a,b`,
+		},
 	} {
-		assert.Equal(t, testCase.expect, FormatPath(testCase.path, testCase.params))
+		result, err := formatPath(testCase.path, testCase.params)
+		assert.NoError(t, err)
+		assert.Equal(t, testCase.expect, result)
 	}
+}
+
+func Test_formatPath_missingKey(t *testing.T) {
+	_, err := formatPath("/foo/:bar", url.Values{})
+	assert.Error(t, err)
+	assert.IsType(t, &MissingParameter{}, err)
+}
+
+func Test_formatPath_removesFromParams(t *testing.T) {
+	p := url.Values{"x": []string{"y"}}
+	_, err := formatPath("/foo/:x", p)
+	assert.NoError(t, err)
+	assert.Len(t, p, 0)
 }
 
 func Test_URIEscape(t *testing.T) {

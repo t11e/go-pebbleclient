@@ -13,22 +13,31 @@ import (
 	"github.com/pkg/errors"
 )
 
-func FormatPath(path string, params Params) string {
+type MissingParameter struct {
+	Key string
+}
+
+func (err *MissingParameter) Error() string {
+	return fmt.Sprintf("The parameter %q is referenced from the path, but is not specified", err.Key)
+}
+
+func formatPath(path string, values url.Values) (string, error) {
 	if !(strings.ContainsRune(path, '/') && strings.ContainsRune(path, ':')) {
-		return path
+		return path, nil
 	}
-	values := params.ToValues()
 	parts := strings.Split(path, "/")
 	for i, part := range parts {
 		if len(part) > 1 && part[0] == ':' {
-			if value, ok := values[part[1:]]; ok && len(value) > 0 {
-				parts[i] = URIEscape(value[0])
+			key := part[1:]
+			if value, ok := values[key]; ok && len(value) > 0 {
+				parts[i] = URIEscape(strings.Join(value, ","))
+				values.Del(key)
 			} else {
-				parts[i] = ""
+				return "", &MissingParameter{key}
 			}
 		}
 	}
-	return strings.Join(parts, "/")
+	return strings.Join(parts, "/"), nil
 }
 
 func URIEscape(path string) string {
