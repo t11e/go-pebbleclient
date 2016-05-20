@@ -29,11 +29,16 @@ func escapedPath(path string) string {
 }
 
 func isNonSuccessStatus(statusCode int) bool {
-	return statusCode < 200 || statusCode >= 300
+	return statusCode < 200 || statusCode > 299
 }
 
 func doesStatusCodeYieldBody(statusCode int) bool {
-	return statusCode != 204
+	switch statusCode {
+	case http.StatusNoContent, http.StatusResetContent:
+		return false
+	default:
+		return true
+	}
 }
 
 func decodeResponseAsJSON(resp *http.Response, body io.Reader, out interface{}) error {

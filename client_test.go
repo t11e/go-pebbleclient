@@ -133,7 +133,7 @@ func TestClient_Get_successStatusCodes(t *testing.T) {
 		if !assert.NoError(t, err) {
 			return
 		}
-		if status != 204 {
+		if status != http.StatusNoContent && status != http.StatusResetContent {
 			assert.Equal(t, datum, result)
 		}
 
