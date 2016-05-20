@@ -29,10 +29,10 @@ type HTTPClient struct {
 
 // New constructs a new client.
 func NewHTTPClient(opts Options) (*HTTPClient, error) {
-	if err := opts.Validate(); err != nil {
+	if err := opts.validate(); err != nil {
 		return nil, err
 	}
-	var newOpts options = *(*options)(opts.ApplyDefaults())
+	var newOpts options = *(*options)(opts.applyDefaults())
 	return &HTTPClient{
 		options: newOpts,
 		hc:      newOpts.HTTPClient,

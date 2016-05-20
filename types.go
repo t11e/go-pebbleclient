@@ -73,8 +73,8 @@ func (o Options) Merge(other *Options) Options {
 	return o
 }
 
-// ApplyDefaults
-func (o *Options) ApplyDefaults() *Options {
+// applyDefaults
+func (o *Options) applyDefaults() *Options {
 	newOpts := *o
 	if newOpts.Protocol == "" {
 		newOpts.Protocol = "http"
@@ -94,7 +94,7 @@ func (o *Options) ApplyDefaults() *Options {
 	return &newOpts
 }
 
-func (o *Options) Validate() error {
+func (o *Options) validate() error {
 	if o.Host == "" {
 		return errors.New("Host must be specified in options")
 	}
