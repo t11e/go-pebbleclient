@@ -2,212 +2,202 @@ package pebbleclient
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
+
+	"golang.org/x/net/context"
+	"golang.org/x/net/context/ctxhttp"
 )
 
-type Params map[string]interface{}
+const maxPartialBody = 64 * 1024
 
-type Body struct {
-	// Data may be []byte or an io.Reader.
-	Data interface{}
+type options Options
 
-	// Optional content type.
-	ContentType string
+func (o options) Merge(other *options) options {
+	op := Options(*other)
+	return options(Options(o).Merge(&op))
 }
 
-func (body *Body) GetReader() (io.Reader, error) {
-	switch t := body.Data.(type) {
-	case io.Reader:
-		return t, nil
-	case []byte:
-		return bytes.NewReader(t), nil
-	default:
-		return nil, fmt.Errorf("Body data must be a reader or []byte, got %T", t)
-	}
-}
-
-// ClientOptions contains options for the client.
-type ClientOptions struct {
-	// AppName of target application.
-	AppName string
-
-	// ApiVersion of target application. Defaults to 1.
-	ApiVersion int
-
-	// Host is the host name, optionally including the port, to connect to.
-	Host string
-
-	// Protocol is the HTTP protocol. Defaults to "http".
-	Protocol string
-
-	// Session is the Checkpoint session key.
-	Session string
-}
-
-// Client is a client for the Central API.
-type Client struct {
-	host       string
-	session    string
-	protocol   string
-	appName    string
-	apiVersion int
-	httpClient *http.Client
+// HTTPClient is a client for the Central API.
+type HTTPClient struct {
+	options
+	hc *http.Client
 }
 
 // New constructs a new client.
-func New(options ClientOptions) (*Client, error) {
-	if options.Host == "" {
-		return nil, errors.New("Host must be specified in options")
+func NewHTTPClient(opts Options) (*HTTPClient, error) {
+	if err := opts.Validate(); err != nil {
+		return nil, err
 	}
-	if options.AppName == "" {
-		return nil, errors.New("Application name must be specified in options")
-	}
-
-	version := options.ApiVersion
-	if version == 0 {
-		version = 1
-	}
-	return &Client{
-		host:       options.Host,
-		session:    options.Session,
-		protocol:   "http",
-		apiVersion: version,
-		appName:    options.AppName,
-		httpClient: &http.Client{},
+	var newOpts options = *(*options)(opts.ApplyDefaults())
+	return &HTTPClient{
+		options: newOpts,
+		hc:      newOpts.HTTPClient,
 	}, nil
 }
 
-// NewFromRequest constructs a new client that inherits the host name, protocol
-// and session from an HTTP request. Any options specified will override inferred
+// NewFromHTTPRequest constructs a new client that inherits the host name, protocol,
+// session and request ID from an HTTP request. Any options specified will override inferred
 // from the request.
-func NewFromRequest(options ClientOptions, req *http.Request) (*Client, error) {
-	var opts ClientOptions = options
-	if opts.Host == "" {
-		opts.Host = req.Host
+func (client *HTTPClient) FromHTTPRequest(req *http.Request) (*HTTPClient, error) {
+	opts := Options(client.options)
+
+	var host string
+	if hosts, ok := req.Header["X-Forwarded-Host"]; ok && len(hosts) > 0 {
+		host = hosts[len(hosts)-1]
+	} else {
+		host = strings.SplitN(req.Host, ":", 2)[0]
 	}
-	if opts.Protocol == "" {
-		opts.Protocol = req.URL.Scheme
+	opts.Host = host
+
+	opts.Protocol = req.URL.Scheme
+
+	if session := req.URL.Query().Get("session"); session != "" {
+		opts.Session = session
+	} else if cookie, err := req.Cookie("checkpoint.session"); err == nil {
+		opts.Session = cookie.Value
 	}
-	if opts.Session == "" {
-		if cookie, err := req.Cookie("checkpoint.session"); err != nil {
-			if err != http.ErrNoCookie {
-				return nil, err
-			}
-			if s := req.URL.Query().Get("session"); s != "" {
-				opts.Session = s
-			}
-		} else {
-			opts.Session = cookie.Value
-		}
+
+	if id := req.Header.Get("Request-Id"); id != "" {
+		opts.RequestId = id
 	}
-	return New(opts)
+
+	opts.HTTPClient = client.hc
+
+	return NewHTTPClient(opts)
 }
 
-func (client *Client) GetOptions() ClientOptions {
-	return ClientOptions{
-		Host:       client.host,
-		Session:    client.session,
-		ApiVersion: client.apiVersion,
-		AppName:    client.appName,
-		Protocol:   client.protocol,
+// GetOptions returns a copy of this client's options.
+func (client *HTTPClient) GetOptions() Options {
+	return Options(client.options)
+}
+
+func (client *HTTPClient) Options(opts Options) Client {
+	newOpts := client.options.Merge((*options)(&opts))
+	return &HTTPClient{
+		options: newOpts,
+		hc:      client.hc,
 	}
 }
 
-// Get performs a GET request. The args may include one or more Params (or *Params).
-// The result of the request is stored in the last argument. Returns NotFound error
-// if not found.
-func (client *Client) Get(path string, args ...interface{}) error {
-	params, _, out, err := parseVarArgs(args...)
+func (client *HTTPClient) Get(path string, opts *RequestOptions, result interface{}) error {
+	return client.do(opts, http.MethodGet, path, nil, result)
+}
+
+func (client *HTTPClient) Head(path string, opts *RequestOptions) error {
+	return client.do(opts, http.MethodHead, path, nil, nil)
+}
+
+func (client *HTTPClient) Post(path string, opts *RequestOptions, body io.Reader, result interface{}) error {
+	return client.do(opts, http.MethodPost, path, body, result)
+}
+
+func (client *HTTPClient) Put(path string, opts *RequestOptions, body io.Reader, result interface{}) error {
+	return client.do(opts, http.MethodPut, path, body, result)
+}
+
+func (client *HTTPClient) Delete(path string, opts *RequestOptions, result interface{}) error {
+	return client.do(opts, http.MethodDelete, path, nil, result)
+}
+
+func (client *HTTPClient) do(
+	opts *RequestOptions,
+	method string,
+	path string,
+	bodyIn io.Reader,
+	result interface{}) error {
+	if opts == nil {
+		opts = &RequestOptions{}
+	}
+
+	req, err := http.NewRequest(method, client.formatEndpointUrl(path, opts.Params), bodyIn)
 	if err != nil {
 		return err
 	}
-	if err := performJSONRequest(func() (*http.Response, error) {
-		return client.httpClient.Get(client.formatUrl(path, params))
-	}, out); err != nil {
-		if clientErr, ok := err.(*ClientRequestError); ok && clientErr.Response.StatusCode == 404 {
-			return NotFound
-		}
-		return err
-	}
-	return nil
-}
 
-// Post performs a POST request. The args may include one or more Params (or *Params),
-// Body (or *Body). The result, if any, is stored in the result argument.
-// Returns NotFound error if not found.
-func (client *Client) Post(path string, args ...interface{}) error {
-	params, body, out, err := parseVarArgs(args...)
-	if body == nil {
-		return errors.New("Body must be specified")
+	req.Header.Set("Content-Type", "application/json; charset=utf8")
+	if client.options.RequestId != "" {
+		req.Header.Set("Request-Id", client.options.RequestId)
 	}
 
-	reader, err := body.GetReader()
+	ctx := client.Ctx
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	resp, err := ctxhttp.Do(ctx, client.hc, req)
 	if err != nil {
 		return err
 	}
-	if err := performJSONRequest(func() (*http.Response, error) {
-		return client.httpClient.Post(client.formatUrl(path, params), body.ContentType, reader)
-	}, out); err != nil {
-		if clientErr, ok := err.(*ClientRequestError); ok && clientErr.Response.StatusCode == 404 {
-			return NotFound
+
+	bodyOut := resp.Body
+	defer func() {
+		if bodyOut != nil {
+			_ = bodyOut.Close()
 		}
-		return err
+	}()
+
+	if isNonSuccessStatus(resp.StatusCode) {
+		return client.buildError(&RequestError{}, opts, resp)
 	}
+
+	if doesStatusCodeYieldBody(resp.StatusCode) && result != nil {
+		return decodeResponseAsJSON(resp, bodyOut, result)
+	}
+
 	return nil
 }
 
-func (client *Client) formatUrl(path string, params *Params) string {
+func (client *HTTPClient) buildError(
+	err *RequestError,
+	opts *RequestOptions,
+	resp *http.Response) error {
+	var buf bytes.Buffer
+	b := make([]byte, 1024)
+	for buf.Len() < maxPartialBody {
+		count, err := resp.Body.Read(b[:])
+		if count == 0 {
+			break
+		}
+		if err != nil && err != io.EOF {
+			break
+		}
+		_, wErr := buf.Write(b[0:count])
+		if err != nil || wErr != nil {
+			break
+		}
+	}
+	err.PartialBody = buf.Bytes()
+	err.client = client
+	err.Resp = resp
+	err.Options = opts
+	return err
+}
+
+func (client *HTTPClient) formatEndpointUrl(path string, params Params) string {
 	if path[0:1] == "/" {
 		path = path[1:]
 	}
 	result := url.URL{
-		Scheme: client.protocol,
-		Host:   client.host,
-		Path:   fmt.Sprintf("/api/%s/v%d/%s", client.appName, client.apiVersion, path),
+		Scheme: client.Protocol,
+		Host:   client.Host,
+		Path: fmt.Sprintf("/api/%s/v%d/%s",
+			client.ServiceName, client.ApiVersion, escapedPath(path)),
 	}
 
 	query := result.Query()
 	if params != nil {
-		for key, value := range *params {
+		for key, value := range params {
 			query.Set(key, fmt.Sprintf("%s", value))
 		}
 	}
-	if client.session != "" {
-		query.Set("session", client.session)
+	if client.Session != "" {
+		query.Set("session", client.Session)
 	}
 	result.RawQuery = query.Encode()
 
 	return result.String()
-}
-
-func parseVarArgs(args ...interface{}) (*Params, *Body, interface{}, error) {
-	if len(args) == 0 {
-		return nil, nil, nil, errors.New("Arguments must include a result (interface{})")
-	}
-	var params *Params
-	var body *Body
-	var result interface{}
-	for i, arg := range args {
-		if i == len(args)-1 {
-			result = arg
-			continue
-		}
-		switch t := arg.(type) {
-		case Params:
-			params = &t
-		case *Params:
-			params = t
-		case Body:
-			body = &t
-		case *Body:
-			body = t
-		default:
-			return nil, nil, nil, fmt.Errorf("Invalid argument; expected Params, got %T", t)
-		}
-	}
-	return params, body, result, nil
 }

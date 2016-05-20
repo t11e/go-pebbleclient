@@ -1,18 +1,20 @@
 package pebbleclient
 
 import (
-	"errors"
 	"fmt"
 	"net/http"
 )
 
-var NotFound = errors.New("Not found")
+type RequestError struct {
+	Options     *RequestOptions
+	Req         *http.Request
+	Resp        *http.Response
+	PartialBody []byte
 
-type ClientRequestError struct {
-	Response *http.Response
+	client *HTTPClient
 }
 
-func (err *ClientRequestError) Error() string {
-	return fmt.Sprintf("Request to %s failed with status %d: %s",
-		err.Response.Request.URL, err.Response.StatusCode, err.Response.Status)
+func (err *RequestError) Error() string {
+	return fmt.Sprintf("Request to %s [%s] failed with status %d: %s",
+		err.client.options.ServiceName, err.Req.URL, err.Resp.StatusCode, err.Resp.Status)
 }

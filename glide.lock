@@ -1,8 +1,15 @@
-hash: 12d33009b8f04eb7b4cefb04cf08bd5d25bfb9054717f447d4ea03369a990ff5
-updated: 2016-05-06T13:09:31.070565165-04:00
+hash: a7f5336fb4e14757bc5fd9c733a4a3200d03f75ba5f61b84916edcd73f7f77b8
+updated: 2016-05-19T15:30:57.417118657-04:00
 imports:
+- name: github.com/ernesto-jimenez/httplogger
+  version: 86cc44f6150a7e9dca8586e425a9c73e71f8ae7d
 - name: github.com/pkg/errors
   version: f85d45fecf0c92c382e731cb03f481957e2ccdd1
 - name: github.com/stretchr/testify
   version: f390dcf405f7b83c997eac1b06768bb9f44dec18
+- name: golang.org/x/net
+  version: 5916dcb167ed985a5b9e6871fbfd74848a4c170b
+  subpackages:
+  - context/ctxhttp
+  - context
 devImports: []
