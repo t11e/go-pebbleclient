@@ -14,10 +14,28 @@ import (
 )
 
 // BuildValues is a convenience function to generate url.Values from a map.
-func BuildValues(m map[string]string) url.Values {
+// Conversion to string is done like so:
+//
+// - If value is nil, use empty string.
+//
+// - If value is a string, use that.
+//
+// - If value implements fmt.Stringer, use that.
+//
+// - Otherwise, use fmt.Sprintf("%v", v).
+//
+func Values(m map[string]interface{}) url.Values {
 	values := url.Values{}
 	for k, v := range m {
-		values.Set(k, v)
+		if v == nil {
+			values.Set(k, "")
+		} else if s, ok := v.(string); ok {
+			values.Set(k, s)
+		} else if s, ok := v.(fmt.Stringer); ok {
+			values.Set(k, s.String())
+		} else {
+			values.Set(k, fmt.Sprintf("%v", v))
+		}
 	}
 	return values
 }

@@ -162,7 +162,7 @@ func TestClient_Get_withParams(t *testing.T) {
 
 	var result *Datum
 	err = client.Get("hello", &RequestOptions{
-		Params: BuildValues(map[string]string{
+		Params: Values(map[string]interface{}{
 			"format": "json",
 		}),
 	}, &result)
