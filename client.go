@@ -1,9 +1,9 @@
 package pebbleclient
 
 import (
-	"bytes"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strings"
@@ -84,41 +84,49 @@ func (client *HTTPClient) Options(opts Options) Client {
 }
 
 func (client *HTTPClient) Get(path string, opts *RequestOptions, result interface{}) error {
-	return client.do(opts, http.MethodGet, path, nil, result)
+	return client.Do(path, opts, http.MethodGet, nil, result)
 }
 
 func (client *HTTPClient) Head(path string, opts *RequestOptions) error {
-	return client.do(opts, http.MethodHead, path, nil, nil)
+	return client.Do(path, opts, http.MethodHead, nil, nil)
 }
 
 func (client *HTTPClient) Post(path string, opts *RequestOptions, body io.Reader, result interface{}) error {
-	return client.do(opts, http.MethodPost, path, body, result)
+	return client.Do(path, opts, http.MethodPost, body, result)
 }
 
 func (client *HTTPClient) Put(path string, opts *RequestOptions, body io.Reader, result interface{}) error {
-	return client.do(opts, http.MethodPut, path, body, result)
+	return client.Do(path, opts, http.MethodPut, body, result)
 }
 
 func (client *HTTPClient) Delete(path string, opts *RequestOptions, result interface{}) error {
-	return client.do(opts, http.MethodDelete, path, nil, result)
+	return client.Do(path, opts, http.MethodDelete, nil, result)
 }
 
-func (client *HTTPClient) do(
+func (client *HTTPClient) Do(
+	path string,
 	opts *RequestOptions,
 	method string,
-	path string,
-	bodyIn io.Reader,
+	body io.Reader,
 	result interface{}) error {
 	if opts == nil {
 		opts = &RequestOptions{}
 	}
 
-	req, err := http.NewRequest(method, client.formatEndpointUrl(path, opts.Params), bodyIn)
+	req, err := http.NewRequest(method, client.formatEndpointUrl(path, opts.Params), body)
 	if err != nil {
 		return err
 	}
 
-	req.Header.Set("Content-Type", "application/json; charset=utf8")
+	if client.Session != "" {
+		req.AddCookie(&http.Cookie{
+			Name:  "checkpoint.session",
+			Value: client.Session,
+		})
+	}
+
+	req.Header.Set("Content-Type", "application/json; charset=utf-8")
+
 	if client.options.RequestId != "" {
 		req.Header.Set("Request-Id", client.options.RequestId)
 	}
@@ -169,7 +177,7 @@ func (client *HTTPClient) buildError(
 	return error
 }
 
-func (client *HTTPClient) formatEndpointUrl(path string, params Params) string {
+func (client *HTTPClient) formatEndpointUrl(path string, params url.Values) string {
 	if path[0:1] == "/" {
 		path = path[1:]
 	}
@@ -182,12 +190,11 @@ func (client *HTTPClient) formatEndpointUrl(path string, params Params) string {
 
 	query := result.Query()
 	if params != nil {
-		for key, value := range params {
-			query.Set(key, fmt.Sprintf("%s", value))
+		for k, vs := range params {
+			for _, v := range vs {
+				query.Add(k, v)
+			}
 		}
-	}
-	if client.Session != "" {
-		query.Set("session", client.Session)
 	}
 	result.RawQuery = query.Encode()
 

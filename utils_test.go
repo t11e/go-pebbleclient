@@ -1,6 +1,10 @@
 package pebbleclient
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
 
 func Test_escapedPath(t *testing.T) {
 	for idx, scenario := range []struct {
@@ -17,4 +21,12 @@ func Test_escapedPath(t *testing.T) {
 			t.Errorf("Scenario %d\nexpected: %s\nactual: %s\n", idx, scenario.expected, actual)
 		}
 	}
+}
+
+func Test_BuildValues(t *testing.T) {
+	vs := BuildValues(map[string]string{
+		"x": "y",
+	})
+	assert.Equal(t, []string{"y"}, vs["x"])
+	assert.Len(t, vs, 1)
 }

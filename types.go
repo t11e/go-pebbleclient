@@ -4,6 +4,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"net/url"
 
 	"golang.org/x/net/context"
 
@@ -109,13 +110,10 @@ type ClientBuilder interface {
 	NewClient(opts Options) Client
 }
 
-// Params is a map of query parameters.
-type Params map[string]interface{}
-
 // RequestOptions is a set of options that can be applied to a request.
 type RequestOptions struct {
 	// Params is an optional map of query parameters.
-	Params Params
+	Params url.Values
 }
 
 type Client interface {

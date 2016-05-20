@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"mime"
 	"net/http"
 	"net/url"
@@ -11,6 +12,15 @@ import (
 
 	"github.com/pkg/errors"
 )
+
+// BuildValues is a convenience function to generate url.Values from a map.
+func BuildValues(m map[string]string) url.Values {
+	values := url.Values{}
+	for k, v := range m {
+		values.Set(k, v)
+	}
+	return values
+}
 
 func escapedPath(path string) string {
 	escaped := (&url.URL{Path: path}).EscapedPath()
