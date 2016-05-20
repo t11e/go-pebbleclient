@@ -13,6 +13,24 @@ import (
 	"github.com/pkg/errors"
 )
 
+func FormatPath(path string, params Params) string {
+	if !(strings.ContainsRune(path, '/') && strings.ContainsRune(path, ':')) {
+		return path
+	}
+	values := params.ToValues()
+	parts := strings.Split(path, "/")
+	for i, part := range parts {
+		if len(part) > 1 && part[0] == ':' {
+			if value, ok := values[part[1:]]; ok && len(value) > 0 {
+				parts[i] = URIEscape(value[0])
+			} else {
+				parts[i] = ""
+			}
+		}
+	}
+	return strings.Join(parts, "/")
+}
+
 func URIEscape(path string) string {
 	escaped := (&url.URL{Path: path}).EscapedPath()
 	escaped = strings.Replace(escaped, "/", "%2F", -1)

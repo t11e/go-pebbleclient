@@ -1,6 +1,59 @@
 package pebbleclient
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
+
+type formatTestCase struct {
+}
+
+func Test_FormatPath(t *testing.T) {
+	for _, testCase := range []struct {
+		path   string
+		params Params
+		expect string
+	}{
+		{
+			path:   "/",
+			params: Params{"x": "y"},
+			expect: "/",
+		},
+		{
+			path:   "/foo/bar",
+			params: Params{"x": "y"},
+			expect: "/foo/bar",
+		},
+		{
+			path:   "/foo/:notexists",
+			params: Params{},
+			expect: "/foo/",
+		},
+		{
+			path:   "/foo/b:x",
+			params: Params{"x": "y"},
+			expect: "/foo/b:x",
+		},
+		{
+			path:   "/foo/:x",
+			params: Params{"x": "y"},
+			expect: "/foo/y",
+		},
+		{
+			path:   "/foo/:x",
+			params: Params{"x": "a b"},
+			expect: `/foo/a%20b`,
+		},
+		{
+			path:   "/foo/:x",
+			params: Params{"x": "a/b"},
+			expect: `/foo/a%2Fb`,
+		},
+	} {
+		assert.Equal(t, testCase.expect, FormatPath(testCase.path, testCase.params))
+	}
+}
 
 func Test_URIEscape(t *testing.T) {
 	for idx, scenario := range []struct {
