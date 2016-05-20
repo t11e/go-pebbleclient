@@ -44,7 +44,7 @@ type Options struct {
 	Ctx context.Context
 }
 
-func (o Options) Merge(other *Options) Options {
+func (o Options) merge(other *Options) Options {
 	if other.ServiceName != "" {
 		o.ServiceName = other.ServiceName
 	}

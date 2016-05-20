@@ -16,9 +16,9 @@ const maxPartialBody = 64 * 1024
 
 type options Options
 
-func (o options) Merge(other *options) options {
+func (o options) merge(other *options) options {
 	op := Options(*other)
-	return options(Options(o).Merge(&op))
+	return options(Options(o).merge(&op))
 }
 
 // HTTPClient is a client for the Central API.
@@ -76,7 +76,7 @@ func (client *HTTPClient) GetOptions() Options {
 }
 
 func (client *HTTPClient) Options(opts Options) Client {
-	newOpts := client.options.Merge((*options)(&opts))
+	newOpts := client.options.merge((*options)(&opts))
 	return &HTTPClient{
 		options: newOpts,
 		hc:      client.hc,
