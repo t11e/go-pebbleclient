@@ -155,29 +155,18 @@ func (client *HTTPClient) do(
 }
 
 func (client *HTTPClient) buildError(
-	err *RequestError,
+	error *RequestError,
 	opts *RequestOptions,
 	resp *http.Response) error {
-	var buf bytes.Buffer
-	b := make([]byte, 1024)
-	for buf.Len() < maxPartialBody {
-		count, err := resp.Body.Read(b[:])
-		if count == 0 {
-			break
-		}
-		if err != nil && err != io.EOF {
-			break
-		}
-		_, wErr := buf.Write(b[0:count])
-		if err != nil || wErr != nil {
-			break
-		}
-	}
-	err.PartialBody = buf.Bytes()
-	err.client = client
-	err.Resp = resp
-	err.Options = opts
-	return err
+	b, _ := ioutil.ReadAll(&io.LimitedReader{
+		R: resp.Body,
+		N: maxPartialBody,
+	})
+	error.PartialBody = b
+	error.client = client
+	error.Resp = resp
+	error.Options = opts
+	return error
 }
 
 func (client *HTTPClient) formatEndpointUrl(path string, params Params) string {
