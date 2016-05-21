@@ -88,7 +88,7 @@ func (connector *Connector) WithRequest(req *http.Request) (*Connector, error) {
 // Connect finds one or more services. The input arguments must be pointers to
 // variables which have the same interface types as those registered with
 // Register().
-func (connector *Connector) Connect(services ...interface{}) error {
+func (connector *Connector) Connect(services ...Service) error {
 	for i, ptr := range services {
 		fn, err := connector.registry.GetFactoryFunc(ptr)
 		if err != nil {
