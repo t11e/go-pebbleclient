@@ -68,12 +68,11 @@ func (client *HTTPClient) FromHTTPRequest(req *http.Request) (*HTTPClient, error
 	return NewHTTPClient(opts)
 }
 
-// GetOptions returns a copy of this client's options.
 func (client *HTTPClient) GetOptions() Options {
 	return Options(client.options)
 }
 
-func (client *HTTPClient) Options(opts Options) Client {
+func (client *HTTPClient) WithOptions(opts Options) Client {
 	newOpts := client.options.merge((*options)(&opts))
 	return &HTTPClient{
 		options: newOpts,

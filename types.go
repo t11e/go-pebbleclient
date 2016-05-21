@@ -11,6 +11,8 @@ import (
 	"github.com/ernesto-jimenez/httplogger"
 )
 
+//go:generate go run vendor/github.com/vektra/mockery/cmd/mockery/mockery.go -name=Client -case=underscore
+
 // Options contains options for the client.
 type Options struct {
 	// ServiceName of target application.
@@ -95,11 +97,6 @@ func (o *Options) applyDefaults() *Options {
 	return &newOpts
 }
 
-// ClientBuilder generates new client instances.
-type ClientBuilder interface {
-	NewClient(opts Options) Client
-}
-
 // Params is a map of query parameters.
 type Params map[string]interface{}
 
@@ -137,9 +134,12 @@ type RequestOptions struct {
 }
 
 type Client interface {
-	// Options returns a new client that has new default client options. Only
+	// GetOptions returns a copy of the current options.
+	GetOptions() Options
+
+	// WithOptions returns a new client that has new default client options. Only
 	// non-zero values in the options argument will override the client's options.
-	Options(opts Options) Client
+	WithOptions(opts Options) Client
 
 	// Get performs a GET request and provides the decoded return value in
 	// the result argument, unless nil.
