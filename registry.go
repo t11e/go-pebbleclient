@@ -36,5 +36,5 @@ func (registry *Registry) GetFactoryFunc(ptr interface{}) (ServiceFactoryFunc, e
 			return fn, nil
 		}
 	}
-	return nil, fmt.Errorf("No registered service matching type %s", t.Name())
+	return nil, fmt.Errorf("No registered service matching type %s", t.String())
 }

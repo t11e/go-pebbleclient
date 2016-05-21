@@ -74,10 +74,15 @@ func (connector *Connector) WithRequest(req *http.Request) (*Connector, error) {
 	} else {
 		host = strings.SplitN(req.Host, ":", 2)[0]
 	}
+	if host == "" {
+		return nil, &NoHostConfigError{host}
+	}
+
 	config := connector.realms.FindByHost(host)
 	if config == nil {
 		return nil, &NoHostConfigError{host}
 	}
+
 	return &Connector{
 		realms:   connector.realms,
 		registry: connector.registry,
