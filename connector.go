@@ -33,11 +33,18 @@ type RealmsConfig map[string]*RealmConfig
 
 func (c RealmsConfig) FindByHost(host string) *RealmConfig {
 	for _, config := range c {
-		if config.Host == host {
+		if normalizeHost(config.Host) == normalizeHost(host) {
 			return config
 		}
 	}
 	return nil
+}
+
+func normalizeHost(h string) string {
+	if strings.HasSuffix(h, ":80") {
+		return strings.TrimSuffix(h, ":80")
+	}
+	return h
 }
 
 type Connector struct {
@@ -72,7 +79,7 @@ func (connector *Connector) WithRequest(req *http.Request) (*Connector, error) {
 	if hosts, ok := req.Header["X-Forwarded-Host"]; ok && len(hosts) > 0 {
 		host = hosts[len(hosts)-1]
 	} else {
-		host = strings.SplitN(req.Host, ":", 2)[0]
+		host = req.Host
 	}
 	if host == "" {
 		return nil, &NoHostConfigError{host}
