@@ -39,12 +39,12 @@ func Test_formatPath(t *testing.T) {
 		{
 			path:   "/foo/:x",
 			params: url.Values{"x": []string{"a b"}},
-			expect: `/foo/a%20b`,
+			expect: `/foo/a b`,
 		},
 		{
 			path:   "/foo/:x",
 			params: url.Values{"x": []string{"a/b"}},
-			expect: `/foo/a%2Fb`,
+			expect: `/foo/a/b`,
 		},
 		{
 			path:   "/foo/:x",
