@@ -30,7 +30,7 @@ func formatPath(path string, values url.Values) (string, error) {
 		if len(part) > 1 && part[0] == ':' {
 			key := part[1:]
 			if value, ok := values[key]; ok && len(value) > 0 {
-				parts[i] = URIEscape(strings.Join(value, ","))
+				parts[i] = strings.Join(value, ",")
 				values.Del(key)
 			} else {
 				return "", &MissingParameter{key}
