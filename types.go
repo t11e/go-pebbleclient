@@ -1,14 +1,16 @@
 package pebbleclient
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
-
-	"golang.org/x/net/context"
+	"regexp"
+	"strconv"
 
 	"github.com/ernesto-jimenez/httplogger"
+	"golang.org/x/net/context"
 )
 
 //go:generate go run vendor/github.com/vektra/mockery/cmd/mockery/mockery.go -name=Client -case=underscore
@@ -166,4 +168,36 @@ type Client interface {
 	// Do performs an HTTP request.
 	Do(path string, opts *RequestOptions, method string, body io.Reader,
 		result interface{}) error
+}
+
+type UID string
+
+var uidRe = regexp.MustCompile(`^([^:]+)\:([^\$]+)\$(.+)$`)
+
+func parseUID(in string) (string, string, int, error) {
+	matches := uidRe.FindStringSubmatch(in)
+	if matches == nil {
+		return "", "", 0, errors.New("invalid uid")
+	}
+	class := matches[1]
+	path := matches[2]
+	nuid, err := strconv.Atoi(matches[3])
+	if err != nil {
+		return "", "", 0, errors.New("invalid uid")
+	}
+	return class, path, nuid, nil
+}
+
+func (uid UID) Class() (string, error) {
+	class, _, _, err := parseUID(string(uid))
+	return class, err
+}
+
+func (uid UID) Path() (string, error) {
+	_, path, _, err := parseUID(string(uid))
+	return path, err
+}
+func (uid UID) NUID() (int, error) {
+	_, _, nuid, err := parseUID(string(uid))
+	return nuid, err
 }
