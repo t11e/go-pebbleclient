@@ -1,7 +1,5 @@
 package: github.com/t11e/go-pebbleclient
 import:
-- package: github.com/pkg/errors
-  version: ~>0.2.0
 - package: github.com/stretchr/testify
   version: master
 - package: github.com/ernesto-jimenez/httplogger
@@ -11,3 +9,5 @@ import:
   - context/ctxhttp
   - context
 - package: github.com/vektra/mockery
+- package: github.com/pkg/errors
+  version: ^0.8.0

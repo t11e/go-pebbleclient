@@ -41,7 +41,7 @@ func TestUID_Class(t *testing.T) {
 	}{
 		{
 			in:          "",
-			expectedErr: "invalid uid",
+			expectedErr: "invalid uid: ",
 		},
 		{
 			in:       "a:b$1",
@@ -53,19 +53,19 @@ func TestUID_Class(t *testing.T) {
 		},
 		{
 			in:          "a:",
-			expectedErr: "invalid uid",
+			expectedErr: "invalid uid: a:",
 		},
 		{
 			in:          "a:$",
-			expectedErr: "invalid uid",
+			expectedErr: "invalid uid: a:$",
 		},
 		{
 			in:          ":b$1",
-			expectedErr: "invalid uid",
+			expectedErr: "invalid uid: :b$1",
 		},
 		{
 			in:          "a:b$c",
-			expectedErr: "invalid uid",
+			expectedErr: "invalid uid: a:b$c",
 		},
 	} {
 		t.Run(fmt.Sprintf("[%d] %s", idx, test.in), func(t *testing.T) {
@@ -88,7 +88,7 @@ func TestUID_Path(t *testing.T) {
 	}{
 		{
 			in:          "",
-			expectedErr: "invalid uid",
+			expectedErr: "invalid uid: ",
 		},
 		{
 			in:       "a:b$1",
@@ -100,19 +100,19 @@ func TestUID_Path(t *testing.T) {
 		},
 		{
 			in:          ":b",
-			expectedErr: "invalid uid",
+			expectedErr: "invalid uid: :b",
 		},
 		{
 			in:          ":b$",
-			expectedErr: "invalid uid",
+			expectedErr: "invalid uid: :b$",
 		},
 		{
 			in:          "a:$1",
-			expectedErr: "invalid uid",
+			expectedErr: "invalid uid: a:$1",
 		},
 		{
 			in:          "a:b$c",
-			expectedErr: "invalid uid",
+			expectedErr: "invalid uid: a:b$c",
 		},
 	} {
 		t.Run(fmt.Sprintf("[%d] %s", idx, test.in), func(t *testing.T) {
@@ -135,7 +135,7 @@ func TestUID_NUID(t *testing.T) {
 	}{
 		{
 			in:          "",
-			expectedErr: "invalid uid",
+			expectedErr: "invalid uid: ",
 		},
 		{
 			in:       "a:b$1",
@@ -147,19 +147,19 @@ func TestUID_NUID(t *testing.T) {
 		},
 		{
 			in:          "$b",
-			expectedErr: "invalid uid",
+			expectedErr: "invalid uid: $b",
 		},
 		{
 			in:          ":$1",
-			expectedErr: "invalid uid",
+			expectedErr: "invalid uid: :$1",
 		},
 		{
 			in:          "a:b$",
-			expectedErr: "invalid uid",
+			expectedErr: "invalid uid: a:b$",
 		},
 		{
 			in:          "a:b$c",
-			expectedErr: "invalid uid",
+			expectedErr: "invalid uid: a:b$c",
 		},
 	} {
 		t.Run(fmt.Sprintf("[%d] %s", idx, test.in), func(t *testing.T) {

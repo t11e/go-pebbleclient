@@ -1,7 +1,6 @@
 package pebbleclient
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -10,6 +9,7 @@ import (
 	"strconv"
 
 	"github.com/ernesto-jimenez/httplogger"
+	"github.com/pkg/errors"
 	"golang.org/x/net/context"
 )
 
@@ -176,13 +176,13 @@ var uidRe = regexp.MustCompile(`^([^:]+)\:([^\$]+)\$(.+)$`)
 func parseUID(in string) (string, string, int, error) {
 	matches := uidRe.FindStringSubmatch(in)
 	if matches == nil {
-		return "", "", 0, errors.New("invalid uid")
+		return "", "", 0, errors.Errorf("invalid uid: %s", in)
 	}
 	class := matches[1]
 	path := matches[2]
 	nuid, err := strconv.Atoi(matches[3])
 	if err != nil {
-		return "", "", 0, errors.New("invalid uid")
+		return "", "", 0, errors.Errorf("invalid uid: %s", in)
 	}
 	return class, path, nuid, nil
 }
