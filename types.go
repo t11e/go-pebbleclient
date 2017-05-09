@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"regexp"
 	"strconv"
+	"time"
 
 	"github.com/ernesto-jimenez/httplogger"
 	"github.com/pkg/errors"
@@ -18,8 +19,8 @@ type Options struct {
 	// ServiceName of target application.
 	ServiceName string
 
-	// ApiVersion of target application. Defaults to 1.
-	ApiVersion int
+	// APIVersion of target application. Defaults to 1.
+	APIVersion int
 
 	// Host is the host name, optionally including the port, to connect to.
 	Host string
@@ -34,8 +35,8 @@ type Options struct {
 	// Session is an optional Checkpoint session key.
 	Session string
 
-	// RequestId is an optional request ID that can be passed on to the service.
-	RequestId string
+	// RequestID is an optional request ID that can be passed on to the service.
+	RequestID string
 
 	// Logger is an optional interface to permit instrumentation. Ignored if
 	// passing in a custom HTTP client.
@@ -49,8 +50,8 @@ func (o Options) merge(other *Options) Options {
 	if other.ServiceName != "" {
 		o.ServiceName = other.ServiceName
 	}
-	if other.ApiVersion != 0 {
-		o.ApiVersion = other.ApiVersion
+	if other.APIVersion != 0 {
+		o.APIVersion = other.APIVersion
 	}
 	if other.Host != "" {
 		o.Host = other.Host
@@ -64,8 +65,8 @@ func (o Options) merge(other *Options) Options {
 	if other.Session != "" {
 		o.Session = other.Session
 	}
-	if other.RequestId != "" {
-		o.RequestId = other.RequestId
+	if other.RequestID != "" {
+		o.RequestID = other.RequestID
 	}
 	if other.Logger != nil {
 		o.Logger = other.Logger
@@ -82,8 +83,8 @@ func (o *Options) applyDefaults() *Options {
 	if newOpts.Protocol == "" {
 		newOpts.Protocol = "http"
 	}
-	if newOpts.ApiVersion == 0 {
-		newOpts.ApiVersion = 1
+	if newOpts.APIVersion == 0 {
+		newOpts.APIVersion = 1
 	}
 	if newOpts.HTTPClient == nil {
 		transport := http.DefaultTransport
@@ -92,6 +93,7 @@ func (o *Options) applyDefaults() *Options {
 		}
 		newOpts.HTTPClient = &http.Client{
 			Transport: transport,
+			Timeout:   60 * time.Second,
 		}
 	}
 	return &newOpts
@@ -100,7 +102,7 @@ func (o *Options) applyDefaults() *Options {
 // Params is a map of query parameters.
 type Params map[string]interface{}
 
-// Values is a convenience function to generate url.Values from params.
+// ToValues is a convenience function to generate url.Values from params.
 // Conversion to string is done like so:
 //
 // - If value is nil, use empty string.

@@ -7,6 +7,7 @@ import (
 )
 
 // TODO: Do we have any methods we can define?
+
 type Service interface{}
 
 type ServiceFactoryFunc func(client Client) (Service, error)

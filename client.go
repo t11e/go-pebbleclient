@@ -28,16 +28,16 @@ type HTTPClient struct {
 	hc *http.Client
 }
 
-// New constructs a new client.
+// NewHTTPClient constructs a new client.
 func NewHTTPClient(opts Options) (*HTTPClient, error) {
-	var newOpts options = *(*options)(opts.applyDefaults())
+	o := *(*options)(opts.applyDefaults())
 	return &HTTPClient{
-		options: newOpts,
-		hc:      newOpts.HTTPClient,
+		options: o,
+		hc:      o.HTTPClient,
 	}, nil
 }
 
-// NewFromHTTPRequest constructs a new client that inherits the host name, protocol,
+// FromHTTPRequest constructs a new client that inherits the host name, protocol,
 // session and request ID from an HTTP request. Any options specified will override inferred
 // from the request.
 func (client *HTTPClient) FromHTTPRequest(req *http.Request) (*HTTPClient, error) {
@@ -60,7 +60,7 @@ func (client *HTTPClient) FromHTTPRequest(req *http.Request) (*HTTPClient, error
 	}
 
 	if id := req.Header.Get("Request-Id"); id != "" {
-		opts.RequestId = id
+		opts.RequestID = id
 	}
 
 	opts.HTTPClient = client.hc
@@ -118,7 +118,7 @@ func (client *HTTPClient) Do(
 		opts = &RequestOptions{}
 	}
 
-	url, err := client.formatEndpointUrl(path, opts.Params)
+	url, err := client.formatEndpointURL(path, opts.Params)
 	if err != nil {
 		return err
 	}
@@ -137,8 +137,8 @@ func (client *HTTPClient) Do(
 
 	req.Header.Set("Content-Type", "application/json; charset=utf-8")
 
-	if client.options.RequestId != "" {
-		req.Header.Set("Request-Id", client.options.RequestId)
+	if client.options.RequestID != "" {
+		req.Header.Set("Request-Id", client.options.RequestID)
 	}
 
 	ctx := client.Ctx
@@ -189,7 +189,7 @@ func (client *HTTPClient) buildError(
 	return error
 }
 
-func (client *HTTPClient) formatEndpointUrl(path string, params Params) (string, error) {
+func (client *HTTPClient) formatEndpointURL(path string, params Params) (string, error) {
 	values := params.ToValues()
 
 	var err error
@@ -203,7 +203,7 @@ func (client *HTTPClient) formatEndpointUrl(path string, params Params) (string,
 	result := url.URL{
 		Scheme: client.Protocol,
 		Host:   client.Host,
-		Path:   fmt.Sprintf("/api/%s/v%d/%s", client.ServiceName, client.ApiVersion, path),
+		Path:   fmt.Sprintf("/api/%s/v%d/%s", client.ServiceName, client.APIVersion, path),
 	}
 
 	query := result.Query()
