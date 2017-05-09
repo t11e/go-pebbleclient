@@ -59,6 +59,16 @@ func URIEscape(path string) string {
 	return escaped
 }
 
+// isRetriableStatus returns true if the HTTP status code indicates that the request
+// can be retried.
+func isRetriableStatus(statusCode int) bool {
+	switch statusCode {
+	case http.StatusGatewayTimeout, http.StatusBadGateway, http.StatusServiceUnavailable:
+		return true
+	}
+	return false
+}
+
 func isNonSuccessStatus(statusCode int) bool {
 	return statusCode < 200 || statusCode > 299
 }

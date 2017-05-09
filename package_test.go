@@ -1,4 +1,4 @@
-package pebbleclient
+package pebbleclient_test
 
 import (
 	"fmt"
@@ -6,6 +6,8 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"time"
+
+	pebbleclient "github.com/t11e/go-pebbleclient"
 )
 
 func hostFromUrl(anUrl string) string {
@@ -16,16 +18,16 @@ func hostFromUrl(anUrl string) string {
 	return u.Host
 }
 
-func newClientAndServer(serverHandler http.HandlerFunc) (Client, *httptest.Server, error) {
-	return newClientAndServerWithOpts(Options{}, serverHandler)
+func newClientAndServer(serverHandler http.HandlerFunc) (pebbleclient.Client, *httptest.Server, error) {
+	return newClientAndServerWithOpts(pebbleclient.Options{}, serverHandler)
 }
 
 func newClientAndServerWithOpts(
-	opts Options,
-	serverHandler http.HandlerFunc) (Client, *httptest.Server, error) {
+	opts pebbleclient.Options,
+	serverHandler http.HandlerFunc) (pebbleclient.Client, *httptest.Server, error) {
 	server := httptest.NewServer(serverHandler)
 
-	var newOpts Options = opts
+	var newOpts pebbleclient.Options = opts
 	if newOpts.Host == "" {
 		newOpts.Host = hostFromUrl(server.URL)
 	}
@@ -33,7 +35,7 @@ func newClientAndServerWithOpts(
 		newOpts.ServiceName = "frobnitz"
 	}
 
-	client, err := NewHTTPClient(newOpts)
+	client, err := pebbleclient.NewHTTPClient(newOpts)
 	return client, server, err
 }
 

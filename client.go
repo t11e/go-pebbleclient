@@ -8,6 +8,9 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
+
+	"github.com/jpillora/backoff"
 
 	"golang.org/x/net/context"
 	"golang.org/x/net/context/ctxhttp"
@@ -127,7 +130,10 @@ func (client *HTTPClient) Do(
 	if err != nil {
 		return err
 	}
-
+	req.Header.Set("Content-Type", "application/json; charset=utf-8")
+	if client.options.RequestID != "" {
+		req.Header.Set("Request-Id", client.options.RequestID)
+	}
 	if client.Session != "" {
 		req.AddCookie(&http.Cookie{
 			Name:  "checkpoint.session",
@@ -135,41 +141,48 @@ func (client *HTTPClient) Do(
 		})
 	}
 
-	req.Header.Set("Content-Type", "application/json; charset=utf-8")
-
-	if client.options.RequestID != "" {
-		req.Header.Set("Request-Id", client.options.RequestID)
-	}
-
 	ctx := client.Ctx
 	if ctx == nil {
 		ctx = context.Background()
 	}
 
-	resp, err := ctxhttp.Do(ctx, client.hc, req)
-	if err != nil {
-		return err
+	boff := &backoff.Backoff{
+		Jitter: true,
 	}
 
-	respBody := resp.Body
-	defer func() {
-		if respBody != nil {
-			// Drain remaining body to work around bug in Go < 1.7
-			_, _ = io.Copy(ioutil.Discard, respBody)
-
-			_ = respBody.Close()
+	for {
+		resp, err := ctxhttp.Do(ctx, client.hc, req)
+		if err != nil {
+			return err
 		}
-	}()
 
-	if isNonSuccessStatus(resp.StatusCode) {
-		return client.buildError(&RequestError{}, opts, req, resp)
+		respBody := resp.Body
+		defer func() {
+			if respBody != nil {
+				// Drain remaining body to work around bug in Go < 1.7
+				_, _ = io.Copy(ioutil.Discard, respBody)
+
+				_ = respBody.Close()
+			}
+		}()
+
+		if isNonSuccessStatus(resp.StatusCode) {
+			if isRetriableStatus(resp.StatusCode) {
+				select {
+				case <-ctx.Done():
+					// Let error handling below handle this
+				case <-time.After(boff.Duration()):
+					continue
+				}
+			}
+			return client.buildError(&RequestError{}, opts, req, resp)
+		}
+
+		if doesStatusCodeYieldBody(resp.StatusCode) && result != nil {
+			return decodeResponseAsJSON(resp, respBody, result)
+		}
+		return nil
 	}
-
-	if doesStatusCodeYieldBody(resp.StatusCode) && result != nil {
-		return decodeResponseAsJSON(resp, respBody, result)
-	}
-
-	return nil
 }
 
 func (client *HTTPClient) buildError(

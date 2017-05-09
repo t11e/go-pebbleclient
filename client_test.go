@@ -1,4 +1,4 @@
-package pebbleclient
+package pebbleclient_test
 
 import (
 	"bytes"
@@ -12,12 +12,14 @@ import (
 	"golang.org/x/net/context"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	pebbleclient "github.com/t11e/go-pebbleclient"
 )
 
 var ctx = context.Background()
 
 func TestNewHTTPClient_validWithDefaults(t *testing.T) {
-	client, err := NewHTTPClient(Options{
+	client, err := pebbleclient.NewHTTPClient(pebbleclient.Options{
 		Host:        "localhost",
 		ServiceName: "frobnitz",
 	})
@@ -30,7 +32,7 @@ func TestNewHTTPClient_validWithDefaults(t *testing.T) {
 }
 
 func TestNewHTTPClient_validWithOptions(t *testing.T) {
-	client, err := NewHTTPClient(Options{
+	client, err := pebbleclient.NewHTTPClient(pebbleclient.Options{
 		Host:        "localhost",
 		Session:     "uio3ui3ui3",
 		ServiceName: "frobnitz",
@@ -75,22 +77,25 @@ func TestClient_Get_errorStatusCodes(t *testing.T) {
 	for status <= 599 {
 		msgBytes := []byte("this failed")
 
-		client, server, err := newClientAndServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-			assert.Equal(t, "/api/frobnitz/v1/hello", req.URL.Path)
-			w.WriteHeader(status)
-			w.Write(msgBytes)
-		}))
+		ctx := context.Background()
+		ctx, _ = context.WithDeadline(ctx, time.Now().Add(500*time.Millisecond))
+
+		client, server, err := newClientAndServerWithOpts(pebbleclient.Options{Ctx: ctx},
+			http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+				assert.Equal(t, "/api/frobnitz/v1/hello", req.URL.Path)
+				w.WriteHeader(status)
+				w.Write(msgBytes)
+			}))
 		assert.NoError(t, err)
 		defer server.Close()
 
 		err = client.Get("hello", nil, &Datum{})
-		if !assert.Error(t, err) {
+		require.Error(t, err)
+
+		if !assert.IsType(t, &pebbleclient.RequestError{}, err) {
 			return
 		}
-		if !assert.IsType(t, &RequestError{}, err) {
-			return
-		}
-		reqErr, ok := err.(*RequestError)
+		reqErr, ok := err.(*pebbleclient.RequestError)
 		if !assert.True(t, ok) {
 			return
 		}
@@ -104,6 +109,44 @@ func TestClient_Get_errorStatusCodes(t *testing.T) {
 	}
 }
 
+func TestClient_Get_retry_whenRetriableStatusCode(t *testing.T) {
+	for _, code := range []int{
+		http.StatusServiceUnavailable,
+		http.StatusGatewayTimeout,
+		http.StatusBadGateway,
+	} {
+		badMsg := []byte("fail")
+
+		datum := &Datum{
+			Message: "Say hello to my little friend",
+		}
+
+		count := 0
+		ctx := context.Background()
+		ctx, _ = context.WithDeadline(ctx, time.Now().Add(5000*time.Millisecond))
+
+		client, server, err := newClientAndServerWithOpts(pebbleclient.Options{Ctx: ctx},
+			http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+				assert.Equal(t, "/api/frobnitz/v1/hello", req.URL.Path)
+				count++
+				if count < 3 {
+					w.WriteHeader(code)
+					w.Write(badMsg)
+				} else {
+					writeJSONDatum(w, http.StatusOK, datum)
+				}
+			}))
+		assert.NoError(t, err)
+		defer server.Close()
+
+		var result *Datum
+		require.NoError(t, client.Get("hello", nil, &result))
+		assert.Equal(t, datum, result)
+
+		server.Close()
+	}
+}
+
 func TestClient_Get_successStatusCodes(t *testing.T) {
 	status := 200
 	for status <= 299 {
@@ -113,12 +156,7 @@ func TestClient_Get_successStatusCodes(t *testing.T) {
 
 		client, server, err := newClientAndServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			assert.Equal(t, "/api/frobnitz/v1/hello", req.URL.Path)
-
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(status)
-
-			encoder := json.NewEncoder(w)
-			encoder.Encode(datum)
+			writeJSONDatum(w, status, datum)
 		}))
 		assert.NoError(t, err)
 		defer server.Close()
@@ -146,18 +184,14 @@ func TestClient_Get_withParams(t *testing.T) {
 	client, server, err := newClientAndServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		assert.Equal(t, "/api/frobnitz/v1/hello", req.URL.Path)
 		assert.Equal(t, "json", req.URL.Query().Get("format"))
-
-		w.Header().Set("Content-Type", "application/json")
-
-		encoder := json.NewEncoder(w)
-		encoder.Encode(datum)
+		writeJSONDatum(w, http.StatusOK, datum)
 	}))
 	assert.NoError(t, err)
 	defer server.Close()
 
 	var result *Datum
-	err = client.Get("hello", &RequestOptions{
-		Params: Params{
+	err = client.Get("hello", &pebbleclient.RequestOptions{
+		Params: pebbleclient.Params{
 			"format": "json",
 		},
 	}, &result)
@@ -185,8 +219,8 @@ func TestClient_Get_withPathParams(t *testing.T) {
 	assert.NoError(t, err)
 	defer server.Close()
 
-	err = client.Get("/get/:name", &RequestOptions{
-		Params: Params{
+	err = client.Get("/get/:name", &pebbleclient.RequestOptions{
+		Params: pebbleclient.Params{
 			"name":   "drkropotkin",
 			"format": "json",
 		},
@@ -211,7 +245,7 @@ func TestClient_Get_badContentTypeInResponse(t *testing.T) {
 func TestClient_Get_withLogging(t *testing.T) {
 	logger := &MockLogger{}
 
-	client, server, err := newClientAndServerWithOpts(Options{
+	client, server, err := newClientAndServerWithOpts(pebbleclient.Options{
 		Logger: logger,
 	}, http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		assert.Equal(t, "/api/frobnitz/v1/hello", req.URL.Path)
@@ -222,7 +256,7 @@ func TestClient_Get_withLogging(t *testing.T) {
 	assert.NoError(t, err)
 	defer server.Close()
 
-	err = client.Get("hello", &RequestOptions{}, nil)
+	err = client.Get("hello", &pebbleclient.RequestOptions{}, nil)
 	assert.NoError(t, err)
 	assert.NotNil(t, logger.loggedReq)
 	assert.Equal(t, "/api/frobnitz/v1/hello", logger.loggedReq.URL.Path)
@@ -250,10 +284,7 @@ func TestClient_Post_plain(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, []byte(`{"message":"Say hello to my little friend"}`), b)
 
-		w.Header().Set("Content-Type", "application/json")
-
-		encoder := json.NewEncoder(w)
-		encoder.Encode(datum)
+		writeJSONDatum(w, http.StatusOK, datum)
 	}))
 	assert.NoError(t, err)
 	defer server.Close()
@@ -262,7 +293,7 @@ func TestClient_Post_plain(t *testing.T) {
 	assert.NoError(t, err)
 
 	var result *Datum
-	err = client.Post("hello", &RequestOptions{}, bytes.NewReader(b), &result)
+	err = client.Post("hello", &pebbleclient.RequestOptions{}, bytes.NewReader(b), &result)
 	assert.NoError(t, err)
 	assert.Equal(t, datum, result)
 }
@@ -275,7 +306,7 @@ func TestClient_FromHTTPRequest_cookie(t *testing.T) {
 		Value: "uio3ui3ui3",
 	})
 
-	client, err := NewHTTPClient(Options{
+	client, err := pebbleclient.NewHTTPClient(pebbleclient.Options{
 		ServiceName: "frobnitz",
 		Host:        "localhost",
 	})
@@ -294,7 +325,7 @@ func TestClient_FromHTTPRequest_sessionParam(t *testing.T) {
 	req, err := http.NewRequest("GET", "http://example.com/?session=uio3ui3ui3", bytes.NewReader([]byte{}))
 	assert.NoError(t, err)
 
-	client, err := NewHTTPClient(Options{
+	client, err := pebbleclient.NewHTTPClient(pebbleclient.Options{
 		ServiceName: "frobnitz",
 		Host:        "localhost",
 	})
@@ -307,4 +338,12 @@ func TestClient_FromHTTPRequest_sessionParam(t *testing.T) {
 	assert.Equal(t, "example.com", client.GetOptions().Host)
 	assert.Equal(t, "http", client.GetOptions().Protocol)
 	assert.Equal(t, "frobnitz", client.GetOptions().ServiceName)
+}
+
+func writeJSONDatum(w http.ResponseWriter, statusCode int, datum interface{}) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
+
+	encoder := json.NewEncoder(w)
+	encoder.Encode(datum)
 }
