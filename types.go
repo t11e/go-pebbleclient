@@ -14,6 +14,8 @@ import (
 	"golang.org/x/net/context"
 )
 
+//go:generate go run vendor/github.com/vektra/mockery/cmd/mockery/mockery.go -name=Client -case=underscore
+
 // Options contains options for the client.
 type Options struct {
 	// ServiceName of target application.
@@ -135,7 +137,6 @@ type RequestOptions struct {
 	Params Params
 }
 
-//go:generate go run vendor/github.com/vektra/mockery/cmd/mockery/mockery.go -name=Client -case=underscore
 type Client interface {
 	// GetOptions returns a copy of the current options.
 	GetOptions() Options
