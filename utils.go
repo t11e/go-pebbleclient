@@ -13,6 +13,19 @@ import (
 	"github.com/pkg/errors"
 )
 
+func hostFromRequest(req *http.Request) (string, bool) {
+	var host string
+	if hosts, ok := req.Header["X-Forwarded-Host"]; ok && len(hosts) > 0 {
+		host = hosts[len(hosts)-1]
+	} else {
+		host = req.Host
+	}
+	if host != "" {
+		return host, true
+	}
+	return "", false
+}
+
 type MissingParameter struct {
 	Key string
 }

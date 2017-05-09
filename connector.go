@@ -75,13 +75,8 @@ func (connector *Connector) Register(intf interface{}, fn ServiceFactoryFunc) {
 // WithRequest returns a new connector which inherits settings from a request. See
 // HTTPClient.FromHTTPRequest for more information.
 func (connector *Connector) WithRequest(req *http.Request) (*Connector, error) {
-	var host string
-	if hosts, ok := req.Header["X-Forwarded-Host"]; ok && len(hosts) > 0 {
-		host = hosts[len(hosts)-1]
-	} else {
-		host = req.Host
-	}
-	if host == "" {
+	host, ok := hostFromRequest(req)
+	if !ok {
 		return nil, &NoHostConfigError{host}
 	}
 
