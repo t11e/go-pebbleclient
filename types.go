@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/ernesto-jimenez/httplogger"
@@ -199,7 +200,26 @@ func (uid UID) Path() (string, error) {
 	_, path, _, err := parseUID(string(uid))
 	return path, err
 }
+
 func (uid UID) NUID() (int, error) {
 	_, _, nuid, err := parseUID(string(uid))
 	return nuid, err
+}
+
+// String implements Stringer.
+func (uid UID) String() string {
+	return string(uid)
+}
+
+// Realm returns the realm part of the path.
+func (uid UID) Realm() (string, error) {
+	path, err := uid.Path()
+	if err != nil {
+		return "", err
+	}
+	i := strings.IndexRune(path, '.')
+	if i == -1 {
+		return path, nil
+	}
+	return path[:i], nil
 }

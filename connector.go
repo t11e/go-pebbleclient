@@ -9,6 +9,14 @@ import (
 	"github.com/pkg/errors"
 )
 
+type NoRealmConfigError struct {
+	Realm string
+}
+
+func (err *NoRealmConfigError) Error() string {
+	return fmt.Sprintf("No configuration for realm %q", err.Realm)
+}
+
 type NoHostConfigError struct {
 	Host string
 }
@@ -81,6 +89,20 @@ func NewConnectorFromConfig(config RealmsConfig) (*Connector, error) {
 // must return a new service instance.
 func (connector *Connector) Register(intf interface{}, fn ServiceFactoryFunc) {
 	connector.registry.Register(reflect.TypeOf(intf), fn)
+}
+
+// WithRealm returns a new connector which inherits settings from a realm.
+func (connector *Connector) WithRealm(name string) (*Connector, error) {
+	config, ok := connector.realms[name]
+	if !ok {
+		return nil, &NoRealmConfigError{name}
+	}
+
+	return &Connector{
+		realms:   connector.realms,
+		registry: connector.registry,
+		client:   connector.client.WithOptions(config.ClientOptions()),
+	}, nil
 }
 
 // WithRequest returns a new connector which inherits settings from a request. See
