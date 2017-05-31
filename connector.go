@@ -18,7 +18,13 @@ func (err *NoHostConfigError) Error() string {
 }
 
 type RealmConfig struct {
-	Host    string `json:"host" yaml:"host"`
+	// Host for this realm.
+	Host string `json:"host" yaml:"host"`
+
+	// Aliases valid for this realm.
+	Aliases []string `json:"aliases" yaml:"aliases"`
+
+	// Session key.
 	Session string `json:"session" yaml:"session"`
 }
 
@@ -33,6 +39,11 @@ type RealmsConfig map[string]*RealmConfig
 
 func (c RealmsConfig) FindByHost(host string) *RealmConfig {
 	for _, config := range c {
+		for _, alias := range config.Aliases {
+			if normalizeHost(alias) == normalizeHost(host) {
+				return config
+			}
+		}
 		if normalizeHost(config.Host) == normalizeHost(host) {
 			return config
 		}
